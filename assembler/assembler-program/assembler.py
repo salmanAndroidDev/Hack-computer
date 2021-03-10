@@ -9,7 +9,7 @@ class Assembler:
 
     def __init__(self, file):
         """Assembler constructor"""
-        self.symbol_table = {}
+        self.symbol_table = initialize_symbol_table()
         self.file = file
         self.commands = []
         self.hack_instructions = []
@@ -19,7 +19,10 @@ class Assembler:
         for line in self.file:
             if line.startswith('//') or line.isspace():
                 continue
+            if '//' in line:
+                line = line.split('//')[0]
             line = line.replace('\n', '')
+            line = line.replace(' ','')
             self.commands.append(line)
 
     def parse(self, command):
@@ -61,10 +64,39 @@ class Assembler:
 
             self.hack_instructions.append(instruction)
 
-    def manage_symbol_table(self):
-        pass
+    def add_labels(self):
+        """Finds labels inside commands and fills the symbol table with labels"""
+        counter = 0
+        labels_list = []
+        for i in range(len(self.commands)):
+            command = self.commands[i]
+            if command.startswith('('):
+                raw_value = command.replace('(', '').replace(')', '')
+                self.symbol_table[raw_value] = str(counter)
+                labels_list.append(command)
+            else:
+                counter += 1
+        for label in labels_list:  # remove labels with parentheses we don't need them.
+            self.commands.remove(label)
+
+    def clean_symbols(self):
+        """Cleans and replace symbol commands with corresponding numerical values"""
+        self.add_labels()
+        variable_counter = 16
+        for i in range(len(self.commands)):
+            command = self.commands[i]
+            if command.startswith('@'):  # symbols always reside in A instructions
+                value = command.split('@')[1]
+                if not value.isdigit():  # is a symbol
+                    if value not in self.symbol_table:  # is a variable
+                        self.symbol_table[value] = str(variable_counter)
+                        variable_counter += 1
+                    numeric_value = self.symbol_table.get(value)
+                    command = '@' + numeric_value
+            self.commands[i] = command
 
     def translate(self):
         """Translate the whole file into language machine"""
         self.clean_data()
+        self.clean_symbols()
         self.translate_line_by_line()

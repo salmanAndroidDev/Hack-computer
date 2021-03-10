@@ -11,12 +11,16 @@ def prepare_test(test_file):
     return instructions
 
 
+ASSEMBLY_FILES_DIRECTORY = 'assembly-files/'
+ASSEMBLY_TEST_FILES_DIRECTORY = 'assembly-test-files/'
+
+
 class UnitTest(TestCase):
     def setUp(self):
-        file = open('assembly_no_symbol_files/PongL.asm', 'r')  # Select assembly file
+        file = open(ASSEMBLY_FILES_DIRECTORY+'Rect.asm', 'r')  # Select assembly file
         text_file = file.readlines()
         file.close()
-        file = open('assembly_test_files/test_Pong.txt', 'r')  # Select binary test file
+        file = open(ASSEMBLY_TEST_FILES_DIRECTORY + 'test_Rect.txt', 'r')  # Select binary test file
         test_file = file.readlines()
         file.close()
 
@@ -31,6 +35,27 @@ class UnitTest(TestCase):
             is_bad = command.isspace() or '//' in command \
                      or '/*' in command or '*/' in command
             self.assertFalse(is_bad)
+        self.assembler.clean_symbols()
+
+    def test_clean_symbols(self):
+        """
+        Test that symbols are cleaned successfully by comparison with corresponding
+        no-symbol files
+        """
+        self.assembler.clean_data()
+        self.assembler.clean_symbols()
+
+        file = open(ASSEMBLY_FILES_DIRECTORY + 'RectL.asm', 'r')
+        text_file = file.readlines()
+        file.close()
+
+        new_assembler = Assembler(text_file)
+        new_assembler.clean_data()
+
+        for i in range(len(new_assembler.commands)):
+            commandL = new_assembler.commands[i]
+            command = self.assembler.commands[i]
+            self.assertEqual(commandL, command)
 
     def test_parse(self):
         """Test that c instruction is parsed successfully"""
@@ -49,6 +74,7 @@ class UnitTest(TestCase):
     def test_convert_C_instruction(self):
         """Test that C instruction is converted to it's corresponding binary code"""
         self.assembler.clean_data()
+        self.assembler.clean_symbols()
         for i in range(len(self.assembler.commands)):
             instruction = self.assembler.commands[i]
             if instruction.startswith('@'):  # A instruction
@@ -59,7 +85,6 @@ class UnitTest(TestCase):
 
     def test_translate(self):
         """Test that translation was done successfully"""
-
         self.assembler.translate()
 
         self.assertEqual(len(self.instructions),
